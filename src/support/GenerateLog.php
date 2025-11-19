@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\helpers;
+namespace Cadud\Helpers\Support;
 
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;

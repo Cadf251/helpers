@@ -17,29 +17,43 @@ use Monolog\Logger;
  *  - CRITICAL (500): Condições criticas. Por exemplo: Um componente da aplicação não está disponível, uma exceção não esperada ocorreu.
  *  - ALERT (550): Uma ação imediata deve ser tomada. Exemplo: O sistema caiu, o banco de dados está indisponível , etc. Deve disparar um alerta para o responsável tomar providencia o mais rápido possível.
  *  - EMERGENCY (600): Emergência: O sistema está inutilizável.
+ * 
  * @author Cadu <cadu.devmarketing@gmail.com>
  */
 class GenerateLog
 {
+  const DEBUG = "debug";
+  const INFO = "info";
+  const NOTICE = "notice";
+  const WARNING = "warning";
+  const ERROR = "error";
+  const CRITICAL = "critical";
+  const ALERT = "alert";
+  const EMERGENCY = "emergency";
 
-  public static function generateLog(string $level, string $message, array|null $content):void
+  // MÉTODO NOVO: Recebe o objeto de erro diretamente
+  public static function log(\Throwable $e, $level = self::ERROR, array $info = [])
+  {
+    $dadosDoErro = [
+      'arquivo'  => $e->getFile(),
+      'linha'    => $e->getLine(),
+    ];
+
+    // Chama o método antigo internamente para salvar, 
+    self::generateLog($level, $e->getMessage(), array_merge($dadosDoErro, $info));
+  }
+
+  public static function generateLog(string $level, string $message, ?array $content = []):void
   {
     $log = new Logger("name");
-
-    $nameFileLog = date("dmY") . ".log";
 
     // Criar o caminho do log
     $logDir = $_ENV['LOG_PATH'];
 
+    // Nome do arquivo
+    $nameFileLog = date("dmY") . ".log";
+
     $filePath = "$logDir/$nameFileLog";
-
-    // Tenta localizar de onde veio o erro
-    $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1] ?? null;
-
-    $caller = $trace
-        ? "{$trace['class']}->{$trace['function']}()"
-        : false;
-
 
     // Verifica se o arquivo existe
     if (!file_exists($filePath)){
@@ -52,9 +66,6 @@ class GenerateLog
     }
 
     $log->pushHandler(new StreamHandler($filePath), Level::Debug);
-
-    if($caller !== false)
-      $content["class"] = $caller;
     
     // Salvar o log no arquivo
     $log->$level($message, $content);

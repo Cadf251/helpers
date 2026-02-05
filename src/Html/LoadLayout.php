@@ -2,8 +2,6 @@
 
 namespace Cadud\Helpers\Html;
 
-use Exception;
-
 class LoadLayout
 {
   /**

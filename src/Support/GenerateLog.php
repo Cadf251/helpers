@@ -22,6 +22,8 @@ use Monolog\Logger;
  */
 class GenerateLog
 {
+  private static string $local;
+
   const DEBUG = "debug";
   const INFO = "info";
   const NOTICE = "notice";
@@ -30,6 +32,13 @@ class GenerateLog
   const CRITICAL = "critical";
   const ALERT = "alert";
   const EMERGENCY = "emergency";
+
+  public static function config(?string $path = null)
+  {
+    self::$local = $path ?? $_ENV['LOG_PATH'];
+
+    return self::$local;
+  }
 
   // MÉTODO NOVO: Recebe o objeto de erro diretamente
   public static function log(\Throwable $e, $level = self::ERROR, array $info = [])
@@ -48,7 +57,7 @@ class GenerateLog
     $log = new Logger("name");
 
     // Criar o caminho do log
-    $logDir = $_ENV['LOG_PATH'];
+    $logDir = self::$local ?? self::config();
 
     // Nome do arquivo
     $nameFileLog = date("dmY") . ".log";

@@ -11,6 +11,22 @@ use PDOStatement;
 class DbConn
 {
   private static ?PDO $conn = null;
+  private static array $credentials = [];
+
+  public static function config(
+    $host = null,
+    $db_name = null,
+    $db_user = null,
+    $db_pass = null
+  )
+  {
+    self::$credentials = [
+      "host" => $host ?? $_ENV["DB_HOST"],
+      "db_name" => $db_name ?? $_ENV["DB_NAME"],
+      "db_user" => $db_user ?? $_ENV["DB_USER"],
+      "db_pass" => $db_pass ?? $_ENV["DB_PASS"]
+    ];
+  }
 
   public static function get(): PDO
   {
@@ -23,6 +39,8 @@ class DbConn
 
   private static function connect(): void
   {
+    if (empty((self::$credentials))) self::config();
+
     try {
       self::$conn = new PDO(
         "mysql:host={$_ENV["DB_HOST"]};port={$_ENV["DB_PORT"]};charset=utf8mb4;dbname={$_ENV["DB_NAME"]}",

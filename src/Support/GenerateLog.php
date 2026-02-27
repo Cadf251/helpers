@@ -40,6 +40,28 @@ class GenerateLog
     return self::$local;
   }
 
+  public static function observe()
+  {
+    // 1. Captura Exceções não tratadas (Try/Catch que você esqueceu)
+    set_exception_handler(function ($e) {
+      self::log($e);
+    });
+
+    // 2. Captura Erros Fatais (Shutdown)
+    register_shutdown_function(function () {
+      $error = error_get_last();
+      // Verifica se o script parou por um erro real (tipo E_ERROR, E_PARSE)
+      if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        self::generateLog(self::CRITICAL, "Fatal Error", $error);
+      }
+    });
+  }
+
+  public static function dump($var)
+  {
+    self::generateLog(self::INFO, "Dump", [$var]);
+  }
+
   // MÉTODO NOVO: Recebe o objeto de erro diretamente
   public static function log(\Throwable $e, $level = self::ERROR, array $info = [])
   {
@@ -52,7 +74,7 @@ class GenerateLog
     self::generateLog($level, $e->getMessage(), array_merge($dadosDoErro, $info));
   }
 
-  public static function generateLog(string $level, string $message, ?array $content = []):void
+  public static function generateLog(string $level, string $message, ?array $content = []): void
   {
     $log = new Logger("name");
 
@@ -65,8 +87,8 @@ class GenerateLog
     $filePath = "$logDir/$nameFileLog";
 
     // Verifica se o arquivo existe
-    if (!file_exists($filePath)){
-    
+    if (!file_exists($filePath)) {
+
       // Abre o arquivo
       $fileOpen = fopen($filePath, "w");
 
@@ -75,7 +97,7 @@ class GenerateLog
     }
 
     $log->pushHandler(new StreamHandler($filePath), Level::Debug);
-    
+
     // Salvar o log no arquivo
     $log->$level($message, $content);
   }

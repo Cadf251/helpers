@@ -50,7 +50,7 @@ class Router
       if ($route['url'] === $url && $route['method'] === $httpMethod) {
 
         if (!self::checkAccess($route['middleware'])) {
-          return class_exists('Controller') ? self::$controller::error(403) : die("Acesso negado");
+          return class_exists(self::$controller) ? self::$controller::error(403) : die("Acesso negado");
         }
 
         $controller = $route['controller'];
@@ -62,7 +62,7 @@ class Router
       }
     }
 
-    return class_exists('Controller') ? self::$controller::error(404) : die("Não encontrado");
+    return class_exists(self::$controller) ? self::$controller::error(404) : die("Não encontrado");
   }
 
   public static function checkAccess(string $middleware)

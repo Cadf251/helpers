@@ -9,6 +9,7 @@ use PHPMailer\PHPMailer\SMTP;
 class Mailer
 {
   private PHPMailer $mail;
+  private static array $credentials = [];
 
   public function __construct(
     string $subject,
@@ -19,20 +20,22 @@ class Mailer
   )
   {
     try {
+      if (empty(self::$credentials)) self::config();
+
       $this->mail = new PHPMailer(true);
       $this->mail->SMTPDebug  = SMTP::DEBUG_OFF;
       $this->mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
       $this->mail->isSMTP();
       $this->mail->SMTPAuth   = true;
-      $this->mail->Host       = $_ENV["SMTP_HOST"];
-      $this->mail->Username   = $_ENV["SMTP_USER"];
-      $this->mail->Password   = $_ENV["SMTP_PASS"];
-      $this->mail->Port       = $_ENV["SMTP_PORT"];
+      $this->mail->Host       = self::$credentials["host"];
+      $this->mail->Username   = self::$credentials["user"];
+      $this->mail->Password   = self::$credentials["pass"];
+      $this->mail->Port       = self::$credentials["port"];
       $this->mail->isHTML(true);
       $this->mail->CharSet = 'UTF-8';
-      $this->mail->setFrom($_ENV["SMTP_FROM"]);
+      $this->mail->setFrom(self::$credentials["from"], self::$credentials["from_name"]);
 
-      if (!empty($params)) {
+      if (!empty($bodyParams)) {
         $body = $this->parameters($body, $bodyParams);
       }
 
@@ -42,6 +45,25 @@ class Mailer
     } catch (Exception $e) {
       throw new Exception($e->getMessage(), $e->getCode(), $e);
     }
+  }
+
+  public static function config(
+    ?string $host = null,
+    ?string $user = null,
+    ?string $pass = null,
+    ?int $port = null,
+    ?string $from = null,
+    ?string $fromName = null
+  )
+  {
+    self::$credentials = [
+      "host" => $host ?? $_ENV["SMTP_HOST"],
+      "user" => $user ?? $_ENV["SMTP_USER"],
+      "pass" => $pass ?? $_ENV["SMTP_PASS"],
+      "port" => $port ?? (int)$_ENV["SMTP_PORT"],
+      "from" => $from ?? $_ENV["SMTP_FROM_EMAIL"],
+      "from_name" => $fromName ?? $_ENV["SMTP_FROM_NAME"]
+    ];
   }
 
   public function addTo(string $to, string $name = '')
@@ -56,7 +78,7 @@ class Mailer
   public function addImage(string $path, string $name)
   {
     try {
-      $this->mail->addEmbeddedImage("path", "name");
+      $this->mail->addEmbeddedImage($path, $name);
     } catch (Exception $e) {
       throw new Exception($e->getMessage(), $e->getCode(), $e);
     }

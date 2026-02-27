@@ -10,16 +10,28 @@ use PDOStatement;
 
 class DbConn
 {
+  private static ?self $instance = null;
   private static ?PDO $conn = null;
   private static array $credentials = [];
+
+  private function __construct()
+  {
+    if (empty(self::$credentials)) self::config();
+  }
+
+  public static function getInstance()
+  {
+    if (self::$instance === null) self::$instance = new self();
+
+    return self::$instance;
+  }
 
   public static function config(
     $host = null,
     $db_name = null,
     $db_user = null,
     $db_pass = null
-  )
-  {
+  ) {
     self::$credentials = [
       "host" => $host ?? $_ENV["DB_HOST"],
       "db_name" => $db_name ?? $_ENV["DB_NAME"],
@@ -28,7 +40,17 @@ class DbConn
     ];
   }
 
+  /**
+   * Use getConn() instead
+   * 
+   * @deprecated
+   */
   public static function get(): PDO
+  {
+    return self::getConn();
+  }
+
+  public static function getConn(): PDO
   {
     if (self::$conn === null) {
       self::connect();
@@ -48,21 +70,23 @@ class DbConn
         $_ENV["DB_PASS"]
       );
     } catch (PDOException $e) {
-      throw new Exception("Banco não conectado: ". $e->getMessage(), 0, $e);
+      throw new Exception("Banco não conectado: " . $e->getMessage(), 0, $e);
     }
   }
 
   public const FETCH_ONE = 1;
+  public const FETCH_ALL = 2;
+
+  /** @deprecated */
   public const FECTH_ALL = 2;
 
   public function execute(
     string $query,
     ?array $params = null,
     int|false $fetch = false
-  )
-  {
+  ) {
     try {
-      $st = self::get()->prepare($query);
+      $st = self::getConn()->prepare($query);
     } catch (Exception $e) {
       throw new Exception($e->getMessage(), $e->getCode(), $e);
     }
@@ -98,8 +122,8 @@ class DbConn
 
     try {
       $this->execute(
-        "INSERT INTO $table (".implode(", ", $fields).")
-        VALUES (".implode(", ", $placeholders).")",
+        "INSERT INTO $table (" . implode(", ", $fields) . ")
+        VALUES (" . implode(", ", $placeholders) . ")",
         $params,
       );
     } catch (Exception $e) {
@@ -133,7 +157,7 @@ class DbConn
     }
   }
 
-  public function getLastInsertId(): string|false 
+  public function getLastInsertId(): string|false
   {
     return (int)self::$conn->lastInsertId();
   }

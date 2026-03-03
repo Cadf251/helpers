@@ -65,9 +65,9 @@ class DbConn
 
     try {
       self::$conn = new PDO(
-        "mysql:host={$_ENV["DB_HOST"]};port={$_ENV["DB_PORT"]};charset=utf8mb4;dbname={$_ENV["DB_NAME"]}",
-        $_ENV["DB_USER"],
-        $_ENV["DB_PASS"]
+        "mysql:host=" . self::$credentials["host"] . ";port=3306;charset=utf8mb4;dbname=" . self::$credentials["db_name"],
+        self::$credentials["db_user"],
+        self::$credentials["db_pass"]
       );
     } catch (PDOException $e) {
       throw new Exception("Banco não conectado: " . $e->getMessage(), 0, $e);

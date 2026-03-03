@@ -110,6 +110,23 @@ class DbConn
     }
   }
 
+  public function findBy(string $table, string $field, mixed $value): array
+  {
+    try {
+      return $this->execute(
+        "SELECT *
+        FROM $table
+        WHERE `$field` = :$field",
+        [
+          ":$field" => $value
+        ],
+        self::FETCH_ONE
+      );
+    } catch (Exception $e) {
+      throw new Exception($e->getMessage(), 0, $e);
+    }
+  }
+
   public function insert(string $table, array $params): int
   {
     $placeholders = [];

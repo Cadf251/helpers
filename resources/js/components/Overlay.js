@@ -13,11 +13,6 @@ export const Overlay = {
       document.body.style.overflow = ''; // Permite o scroll
     });
 
-    // Fechar ao clicar no backdrop (opcional)
-    this.el.addEventListener('click', (e) => {
-      if (e.target === this.el) this.close();
-    });
-
     document.addEventListener('click', (e) => {
       const trigger = e.target.closest('[data-overlay-open]');
       const closer = e.target.closest('[data-overlay-close]');

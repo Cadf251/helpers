@@ -17,11 +17,29 @@ export const Overlay = {
     this.el.addEventListener('click', (e) => {
       if (e.target === this.el) this.close();
     });
+
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('[data-overlay-open]');
+      const closer = e.target.closest('[data-overlay-close]');
+      const moduler = e.target.closest('[data-overlay-open-module]');
+
+      if (trigger) {
+        this.open();
+      }
+
+      if (closer || e.target === this.el) {
+        this.close();
+      }
+
+      if (moduler) {
+        this.showModule(moduler.dataset.overlayOpenModule);
+      }
+    });
   },
 
   open() {
     document.body.style.overflow = 'hidden'; // Trava o scroll
-    this.el.showModal(); 
+    this.el.showModal();
   },
 
   close() {
@@ -29,19 +47,17 @@ export const Overlay = {
   },
 
   // Opcional, caso haja módulos
-  hideModules(modules) {
+  hideModules() {
+    let modules = document.querySelectorAll('[data-overlay-module]')
     modules.forEach((module) => {
       module.classList.remove("is-selected");
     });
   },
 
-  showModule(selector, idx) {
-    let modules = document.querySelectorAll(selector);
-    if (!modules) return;
-
-    this.hideModules(modules);
+  showModule(selector) {
+    this.hideModules();
+    let module = document.querySelector(selector);
     
-    let module = modules[idx];
     if (module) {
       module.classList.add("is-selected");
       this.open();

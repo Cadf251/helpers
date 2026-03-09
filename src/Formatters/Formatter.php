@@ -41,4 +41,37 @@ class Formatter
 
     return $phone;
   }
+
+  public static function phoneToLocal(string $phone): string
+  {
+    // 1. Remove tudo que não for número
+    $phone = preg_replace('/\D/', '', $phone);
+
+    // 2. Remove o DDI (55) se ele estiver no início
+    if (strpos($phone, '55') === 0) {
+      $phone = substr($phone, 2);
+    }
+
+    $len = strlen($phone);
+
+    // 3. Verifica se o tamanho faz sentido (DDD + 8 ou 9 dígitos)
+    if ($len < 10 || $len > 11) {
+      return $phone; // Retorna o original se não for um padrão reconhecido
+    }
+
+    // 4. Aplica a máscara baseada no tamanho
+    $ddd = substr($phone, 0, 2);
+    
+    if ($len === 11) {
+      // Celular: (XX) 9XXXX-XXXX
+      $part1 = substr($phone, 2, 5);
+      $part2 = substr($phone, 7);
+      return "($ddd) $part1-$part2";
+    } else {
+      // Fixo: (XX) XXXX-XXXX
+      $part1 = substr($phone, 2, 4);
+      $part2 = substr($phone, 6);
+      return "($ddd) $part1-$part2";
+    }
+  }
 }

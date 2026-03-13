@@ -4,14 +4,18 @@ namespace Cadud\Helpers\Core;
 
 class Router
 {
-  private static $controller = null;
   private static $dev_only = null;
+
+  private static bool $useSlash = false;
 
   private static $routes = [];
 
-  public static function configController(string $controller)
+  /** @deprecated */ 
+  public static function configController(?string $controller = null) {}
+
+  public static function configUseSlash(bool $useSlash = true)
   {
-    self::$controller = $controller;
+    self::$useSlash = $useSlash;
   }
 
   public static function configDevOnlyMiddleware(string $dev_only_host)
@@ -19,50 +23,81 @@ class Router
     self::$dev_only = $dev_only_host;
   }
 
-  public static function get(string $url, string $controller, string $method, string $middleware = 'guest')
+  public static function get(string $url, $target, string $method = '', string $middleware = 'guest')
   {
-    self::add("GET", $url, $controller, $method, $middleware);
+    self::add("GET", $url, $target, $method, $middleware);
   }
 
-  public static function post(string $url, string $controller, string $method, string $middleware = 'guest')
+  public static function post(string $url, $target, string $method = '', string $middleware = 'guest')
   {
-    self::add("POST", $url, $controller, $method, $middleware);
+    self::add("POST", $url, $target, $method, $middleware);
   }
 
-  private static function add(string $url_method, string $url, string $controller, string $method, string $middleware)
+  private static function add(string $url_method, string $url, $target, string $method = '', string $middleware)
   {
-    self::$routes[] = [
+    $url = self::prepareUrl($url);
+
+    self::$routes[$url] = [
       'method'     => strtoupper($url_method),
-      'url'        => trim($url, '/'),
-      'controller' => $controller,
+      'target' => $target,
       'action'     => $method,
       'middleware' => $middleware
     ];
   }
 
-  public static function run(string $url)
+  private static function prepareUrl(string $url): string
   {
     $url = trim($url, '/');
-    $url = empty($url) ? 'index' : $url;
+    if (self::$useSlash) {
+      return '/' . $url;
+    }
+    return $url;
+  }
+
+  public static function run(string $url)
+  {
+    $url = self::prepareUrl($url);
+
     $httpMethod = $_SERVER['REQUEST_METHOD'];
 
-    foreach (self::$routes as $route) {
-      if ($route['url'] === $url && $route['method'] === $httpMethod) {
+    if (isset(self::$routes[$url]) && self::$routes[$url]["method"] === $httpMethod) {
+      $route = self::$routes[$url];
 
-        if (!self::checkAccess($route['middleware'])) {
-          return class_exists(self::$controller) ? self::$controller::error(403) : die("Acesso negado");
-        }
+      if (!self::checkAccess($route['middleware'])) {
+        return die("Acesso negado");
+      }
 
-        $controller = $route['controller'];
-        $action = $route['action'];
+      $target = $route['target'];
+      $action = $route['action'];
 
-        if (class_exists($controller) && method_exists($controller, $action)) {
-          return $controller::$action();
-        }
+      if (is_callable($target)) {
+        return $target();
+      }
+
+      if (class_exists($target) && method_exists($target, $action)) {
+        return $target::$action();
       }
     }
 
-    return class_exists(self::$controller) ? self::$controller::error(404) : die("Não encontrado");
+    return die("Não encontrado");
+
+    // foreach (self::$routes as $route) {
+    //   if ($route['url'] === $url && $route['method'] === $httpMethod) {
+
+    //     if (!self::checkAccess($route['middleware'])) {
+    //       return die("Acesso negado");
+    //     }
+
+    //     $controller = $route['controller'];
+    //     $action = $route['action'];
+
+    //     if (class_exists($controller) && method_exists($controller, $action)) {
+    //       return $controller::$action();
+    //     }
+    //   }
+    // }
+
+    // return die("Não encontrado");
   }
 
   public static function checkAccess(string $middleware)

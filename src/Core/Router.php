@@ -5,9 +5,7 @@ namespace Cadud\Helpers\Core;
 class Router
 {
   private static $dev_only = null;
-
   private static bool $useSlash = false;
-
   private static $routes = [];
 
   /** @deprecated */ 
@@ -33,7 +31,7 @@ class Router
     self::add("POST", $url, $target, $method, $middleware);
   }
 
-  private static function add(string $url_method, string $url, $target, string $method = '', string $middleware)
+  private static function add(string $url_method, string $url, $target, string $method = '', string $middleware = 'guest')
   {
     $url = self::prepareUrl($url);
 
@@ -64,7 +62,7 @@ class Router
       $route = self::$routes[$url];
 
       if (!self::checkAccess($route['middleware'])) {
-        return die("Acesso negado");
+        return ["error" => 403];
       }
 
       $target = $route['target'];
@@ -79,25 +77,7 @@ class Router
       }
     }
 
-    return die("Não encontrado");
-
-    // foreach (self::$routes as $route) {
-    //   if ($route['url'] === $url && $route['method'] === $httpMethod) {
-
-    //     if (!self::checkAccess($route['middleware'])) {
-    //       return die("Acesso negado");
-    //     }
-
-    //     $controller = $route['controller'];
-    //     $action = $route['action'];
-
-    //     if (class_exists($controller) && method_exists($controller, $action)) {
-    //       return $controller::$action();
-    //     }
-    //   }
-    // }
-
-    // return die("Não encontrado");
+    return ["error" => 404];
   }
 
   public static function checkAccess(string $middleware)

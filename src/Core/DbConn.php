@@ -113,7 +113,7 @@ class DbConn
   public function findBy(string $table, string $field, mixed $value): array
   {
     try {
-      return $this->execute(
+      $result = $this->execute(
         "SELECT *
         FROM $table
         WHERE `$field` = :$field",
@@ -122,6 +122,7 @@ class DbConn
         ],
         self::FETCH_ONE
       );
+      return $result ?: [];
     } catch (Exception $e) {
       throw new Exception($e->getMessage(), 0, $e);
     }

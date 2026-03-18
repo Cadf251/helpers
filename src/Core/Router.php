@@ -33,32 +33,35 @@ class Router
 
   private static function add(string $url_method, string $url, $target, string $method = '', string $middleware = 'guest')
   {
-    $url = self::prepareUrl($url);
+    $url = self::prepareUrl($url, $url_method);
 
     self::$routes[$url] = [
-      'method'     => strtoupper($url_method),
       'target' => $target,
       'action'     => $method,
       'middleware' => $middleware
     ];
   }
 
-  private static function prepareUrl(string $url): string
+  private static function prepareUrl(string $url, string $url_method): string
   {
     $url = trim($url, '/');
+    $method = strtoupper($url_method);
+
+    $key = $url . ":" . $method;
+
     if (self::$useSlash) {
-      return '/' . $url;
+      return "/$key";
     }
-    return $url;
+    return $key;
   }
 
   public static function run(string $url)
   {
-    $url = self::prepareUrl($url);
-
     $httpMethod = $_SERVER['REQUEST_METHOD'];
 
-    if (isset(self::$routes[$url]) && self::$routes[$url]["method"] === $httpMethod) {
+    $url = self::prepareUrl($url, $httpMethod);
+
+    if (isset(self::$routes[$url])) {
       $route = self::$routes[$url];
 
       if (!self::checkAccess($route['middleware'])) {

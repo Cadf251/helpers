@@ -88,7 +88,7 @@ class DbConn
     try {
       $st = self::getConn()->prepare($query);
     } catch (Exception $e) {
-      throw new Exception($e->getMessage(), $e->getCode(), $e);
+      throw new Exception($e->getMessage(), 0, $e);
     }
 
     if ($params) {
@@ -98,7 +98,7 @@ class DbConn
     try {
       $st->execute();
     } catch (Exception $e) {
-      throw new Exception($e->getMessage(), $e->getCode(), $e);
+      throw new Exception($e->getMessage(), 0, $e);
     }
 
     if ($fetch) {
@@ -118,7 +118,7 @@ class DbConn
         FROM $table
         WHERE `$field` = :$field",
         [
-          ":$field" => $value
+          "$field" => $value
         ],
         self::FETCH_ONE
       );

@@ -129,9 +129,6 @@ class Router
    */
   private static function execute(array $route, array $params = [])
   {
-    var_dump($route);
-    var_dump($params);
-
     if (!self::checkAccess($route['middleware'])) {
       return ["error" => 403];
     }

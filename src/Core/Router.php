@@ -5,16 +5,18 @@ namespace Cadud\Helpers\Core;
 class Router
 {
   private static $dev_only = null;
-  private static bool $useSlash = false;
+
+  /** @var $routesPara rotas fixas */
   private static $routes = [];
 
-  /** @deprecated */ 
+  /** @var $magicRoutes Para rodas dinâmicas */
+  private static $magicRoutes = [];
+
+  /** @deprecated */
   public static function configController(?string $controller = null) {}
 
-  public static function configUseSlash(bool $useSlash = true)
-  {
-    self::$useSlash = $useSlash;
-  }
+  /** @deprecated */
+  public static function configUseSlash(bool $useSlash = true) {}
 
   public static function configDevOnlyMiddleware(string $dev_only_host)
   {
@@ -33,51 +35,116 @@ class Router
 
   private static function add(string $url_method, string $url, $target, string $method = '', string $middleware = 'guest')
   {
-    $url = self::prepareUrl($url, $url_method);
+    $url = self::prepareUrl($url);
+    $method = self::prepareMethod($method);
 
-    self::$routes[$url] = [
-      'target' => $target,
-      'action'     => $method,
-      'middleware' => $middleware
+    $data = [
+      'target'      => $target,
+      'action'      => $method,
+      'middleware'  => $middleware
     ];
+
+    if (self::isMagic($url)) {
+
+      self::$magicRoutes[$url_method][] = [
+        'url' => $url,
+        ...$data
+      ];
+    } else {
+      self::$routes[$url_method][$url] = $data;
+    }
   }
 
-  private static function prepareUrl(string $url, string $url_method): string
+  private static function prepareUrl(string $url): string
   {
-    $url = trim($url, '/');
-    $method = strtoupper($url_method);
+    return trim($url, '/');
+  }
 
-    $key = $url . ":" . $method;
+  private static function prepareMethod(string $method): string
+  {
+    return strtoupper($method);
+  }
 
-    if (self::$useSlash) {
-      return "/$key";
-    }
-    return $key;
+  public static function isMagic(string $url)
+  {
+    return str_contains($url, '{');
   }
 
   public static function run(string $url)
   {
-    $httpMethod = $_SERVER['REQUEST_METHOD'];
+    $url = self::prepareUrl($url);
+    $httpMethod = self::prepareMethod($_SERVER['REQUEST_METHOD']);
 
-    $url = self::prepareUrl($url, $httpMethod);
+    if (isset(self::$routes[$httpMethod][$url])) {
+      $route = self::$routes[$httpMethod][$url];
 
-    if (isset(self::$routes[$url])) {
-      $route = self::$routes[$url];
+      return self::execute($route);
+    }
 
-      if (!self::checkAccess($route['middleware'])) {
-        return ["error" => 403];
+    if (isset(self::$magicRoutes[$httpMethod])) {
+      // Partes da URL que está sendo rodada
+      $urlParts = explode('/', $url);
+
+      // Contagem de slices
+      $urlCount = count($urlParts);
+
+      foreach (self::$magicRoutes[$httpMethod] as $route) {
+        // Partes da rota que está sendo verificada
+        $pathParts = explode('/', $route['url']);
+
+        // Se o número de fatias for diferente, essa rota não serve
+        if (count($pathParts) !== $urlCount) {
+          continue;
+        }
+
+        $params = [];
+        $match = true;
+
+        // Compara fatia por fatia
+        foreach ($pathParts as $index => $part) {
+          if (self::isMagic($part)) {
+            // É um parametro mágico {}, guarde o parametro no array
+            $params[] = $urlParts[$index];
+          } else if ($part !== $urlParts[$index]) {
+
+            // É um texto fixo (ex: "blog") e não bate com a URL? não serve também
+            $match = false;
+            break;
+          }
+        }
+
+        // Se chegamos aqui e $match continua true, a rota foi encontrada
+        if ($match) {
+          return self::execute($route, $params);
+        }
       }
+    }
 
-      $target = $route['target'];
-      $action = $route['action'];
+    return ["error" => 404];
+  }
 
-      if (is_callable($target)) {
-        return $target();
-      }
 
-      if (class_exists($target) && method_exists($target, $action)) {
-        return $target::$action();
-      }
+  /**
+   * O Motor único de execução
+   */
+  private static function execute(array $route, array $params = [])
+  {
+    var_dump($route);
+    var_dump($params);
+
+    if (!self::checkAccess($route['middleware'])) {
+      return ["error" => 403];
+    }
+
+    $target = $route['target'];
+    $action = $route['action'];
+
+    if (is_callable($target)) {
+      return call_user_func_array($target, $params);
+    }
+
+    if (class_exists($target) && method_exists($target, $action)) {
+      return $target::$action();
     }
 
     return ["error" => 404];

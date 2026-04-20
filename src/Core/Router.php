@@ -123,7 +123,6 @@ class Router
     return ["error" => 404];
   }
 
-
   /**
    * O Motor único de execução
    */
@@ -151,5 +150,16 @@ class Router
   {
     if ($middleware === "guest") return true;
     if ($middleware === "dev") return $_SERVER['SERVER_NAME'] === self::$dev_only;
+  }
+
+  /**
+   * Returns all the routes in array format
+   */
+  public static function debug()
+  {
+    return [
+      "comum routes" => self::$routes,
+      "magic routes" => self::$magicRoutes
+    ];
   }
 }

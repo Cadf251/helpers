@@ -74,6 +74,21 @@ class DbConn
     }
   }
 
+  /**
+   * Show the credentials that are used on the moment that the function is called (except for the pass, obviously)
+   */
+  public static function debug():array
+  {
+    // Made a copy of the array
+    $full = self::$credentials;
+
+    // Hide the pass
+    unset($full["db_pass"]);
+
+    // Returns it
+    return $full;
+  }
+
   public const FETCH_ONE = 1;
   public const FETCH_ALL = 2;
 

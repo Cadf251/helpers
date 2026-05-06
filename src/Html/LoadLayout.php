@@ -23,6 +23,18 @@ class LoadLayout
     echo self::minify($content);
     return true;
   }
+
+  public static function loadView(string $path, array $view = []): ViewResponse
+  {
+    if (!file_exists($path)) return ViewResponse::error();
+
+    ob_start();
+    require $path;
+    $content = ob_get_clean();
+    $result = self::minify($content);
+
+    return new ViewResponse($result);
+  }
   
   /** Minifica o HTML final */
   public static function minify($buffer)

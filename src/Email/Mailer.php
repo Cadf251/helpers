@@ -8,7 +8,7 @@ use PHPMailer\PHPMailer\SMTP;
 
 class Mailer
 {
-  private PHPMailer $mail;
+  public PHPMailer $mail;
   private static array $credentials = [];
 
   public function __construct(

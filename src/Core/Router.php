@@ -4,13 +4,13 @@ namespace Cadud\Helpers\Core;
 
 class Router
 {
-  private static $dev_only = null;
+  /** @var array $routes Para rotas fixas */
+  private static array $routes = [];
 
-  /** @var $routesPara rotas fixas */
-  private static $routes = [];
+  /** @var array $magicRoutes Para rodas dinâmicas */
+  private static array $magicRoutes = [];
 
-  /** @var $magicRoutes Para rodas dinâmicas */
-  private static $magicRoutes = [];
+  private static array $middlewares = [];
 
   /** @deprecated */
   public static function configController(?string $controller = null) {}
@@ -18,6 +18,10 @@ class Router
   /** @deprecated */
   public static function configUseSlash(bool $useSlash = true) {}
 
+  /** @deprecated */
+  private static $dev_only = null;
+
+  /** @deprecated */
   public static function configDevOnlyMiddleware(string $dev_only_host)
   {
     self::$dev_only = $dev_only_host;
@@ -31,6 +35,11 @@ class Router
   public static function post(string $url, $target, string $method = '', string $middleware = 'guest')
   {
     self::add("POST", $url, $target, $method, $middleware);
+  }
+
+  public static function addMiddleware(string $key, callable $func)
+  {
+    self::$middlewares[$key] = $func;
   }
 
   private static function add(string $url_method, string $url, $target, string $method = '', string $middleware = 'guest')
@@ -146,10 +155,11 @@ class Router
     return ["error" => 404];
   }
 
-  public static function checkAccess(string $middleware)
+  public static function checkAccess(string $key): bool
   {
-    if ($middleware === "guest") return true;
-    if ($middleware === "dev") return $_SERVER['SERVER_NAME'] === self::$dev_only;
+    if ($key === "guest") return true;
+
+    return $middle[$key] ?? false;
   }
 
   /**

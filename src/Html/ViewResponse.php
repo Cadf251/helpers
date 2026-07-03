@@ -31,8 +31,7 @@ class ViewResponse
 
   public static function minify(string $buffer): string
   {
-    // 1. Remove comentários HTML (mas mantém comentários condicionais de IE, se existirem)
-    $buffer = preg_replace('/).)*-->/s', '', $buffer);
+    $buffer = preg_replace('/<!--[\s\S]*?-->/', '', $buffer);
 
     // 2. Processamento de espaços em ordem cronológica perfeita
     $search = [

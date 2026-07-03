@@ -6,11 +6,11 @@ namespace Cadud\Helpers\Html;
 
 class Compiler
 {
-  private string $publicPath;
+  private string $basePath;
 
-  public function __construct(string $publicPath)
+  public function __construct(string $basePath)
   {
-    $this->publicPath = rtrim($publicPath, '/');
+    $this->basePath = rtrim($basePath, '/');
   }
 
   /**
@@ -31,12 +31,12 @@ class Compiler
 
     // Determina o caminho exato do arquivo baseado na URL
     if ($cleanRoute === '') {
-      // Se for a Home, vira public/html/index.html
-      $targetFolder = $this->publicPath . "/html";
+      // Se for a Home, vira .../index.html
+      $targetFolder = $this->basePath;
       $targetFile = $targetFolder . '/index.html';
     } else {
-      // Se for /sobre, vira public/html/sobre/index.html para o Apache/Nginx ler direto
-      $targetFolder = $this->publicPath . '/html/' . $cleanRoute;
+      // Se for /sobre, vira .../sobre/index.html para o Apache/Nginx ler direto
+      $targetFolder = $this->basePath . '/' . $cleanRoute;
       $targetFile = $targetFolder . '/index.html';
     }
 
@@ -54,11 +54,11 @@ class Compiler
   /**
    * Limpa o cache estático de uma rota específica ou de todo o site.
    */
-  public function clear(string $route = null): void
+  public function clear(?string $route = null): void
   {
     if ($route) {
       $cleanRoute = trim($route, '/');
-      $targetFile = $this->publicPath . '/' . ($cleanRoute === '' ? 'index.html' : $cleanRoute . '/index.html');
+      $targetFile = $this->basePath . '/' . ($cleanRoute === '' ? 'index.html' : $cleanRoute . '/index.html');
       if (file_exists($targetFile)) {
         unlink($targetFile);
       }

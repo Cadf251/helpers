@@ -32,12 +32,12 @@ class Compiler
     // Determina o caminho exato do arquivo baseado na URL
     if ($cleanRoute === '') {
       // Se for a Home, vira public/html/index.html
-      $targetFolder = $this->publicPath;
-      $targetFile = $targetFolder . '/html/index.html';
+      $targetFolder = $this->publicPath . "/html";
+      $targetFile = $targetFolder . '/index.html';
     } else {
       // Se for /sobre, vira public/html/sobre/index.html para o Apache/Nginx ler direto
-      $targetFolder = $this->publicPath . '/' . $cleanRoute;
-      $targetFile = $targetFolder . '/html/index.html';
+      $targetFolder = $this->publicPath . '/html/' . $cleanRoute;
+      $targetFile = $targetFolder . '/index.html';
     }
 
     // Garante que a pasta da rota existe

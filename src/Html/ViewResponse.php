@@ -15,7 +15,7 @@ class ViewResponse
   public static function error(): self
   {
     $inst = new self("");
-    $inst->withError = false;
+    $inst->withError = true;
     return $inst;
   }
 

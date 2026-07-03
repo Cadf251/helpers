@@ -5,25 +5,13 @@ namespace Cadud\Helpers\Html;
 class LoadLayout
 {
   /**
-   * Carrega um require  faz o tratamento de erro se necessário e enviar para um fallback em caso de erro 500
+   * Carrega uma view e retorna com erro caso algo tenha acontecido
    * 
-   * @param string $path O caminho absoluto
+   * @param string $path O caminho físico absoluto
+   * @param array $view As informações que devem ser passadas para a view
    * 
-   * @GenerateLog
-   * 
-   * @return void
+   * @return ViewResponse 
    */
-  public static function loadLayout(string $path, array $view = [])
-  {
-    if (!file_exists($path)) return false;
-
-    ob_start();
-    require $path;
-    $content = ob_get_clean();
-    echo self::minify($content);
-    return true;
-  }
-
   public static function loadView(string $path, array $view = []): ViewResponse
   {
     if (!file_exists($path)) return ViewResponse::error();
@@ -31,23 +19,11 @@ class LoadLayout
     ob_start();
     require $path;
     $content = ob_get_clean();
-    $result = self::minify($content);
 
-    return new ViewResponse($result);
-  }
-  
-  /** Minifica o HTML final */
-  public static function minify($buffer)
-  {
-    // remove quebras de linha e espaços duplicados
-    $search = [
-      '/\>[^\S ]+/s',     // remove espaços após tags >
-      '/[^\S ]+\</s',     // remove espaços antes de tags <
-      '/(\s)+/s'          // múltiplos espaços → 1 espaço
-    ];
+    if ($content === false) {
+      return ViewResponse::error();
+    }
 
-    $replace = ['>', '<', '\\1'];
-
-    return preg_replace($search, $replace, $buffer);
+    return new ViewResponse($content);
   }
 }

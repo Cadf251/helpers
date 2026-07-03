@@ -31,18 +31,18 @@ class ViewResponse
 
   public static function minify(string $buffer): string
   {
-    // 1. Remove comentários HTML
-    $buffer = preg_replace('/<!--(?!\s*(?:\[if [^\]]+]|<!|>))(?:(?!-->).)*-->/s', '', $buffer);
+    // 1. Remove comentários HTML (mas mantém comentários condicionais de IE, se existirem)
+    $buffer = preg_replace('/).)*-->/s', '', $buffer);
 
-    // 2. A sua lógica de colapsar espaços, mas com cautela
+    // 2. Processamento de espaços em ordem cronológica perfeita
     $search = [
-      '/\>[^\S ]+/s',     // espaços após tags
-      '/[^\S ]+\</s',     // espaços antes de tags
-      '/(\s)+/s',         // múltiplos espaços vira um
-      '/(\r?\n)/'         // remove quebras de linha
+      '/(\s)+/s',       // Espaços multiplos, tabs, \n, vira u espaço único
+      '/\>[^\S ]+/s',   // ">  " vira ">"
+      '/[^\S ]+\</s',   // "  <" vira "<"
+      '/ \>/s'          // "<div >" vira "<div>"
     ];
 
-    $replace = ['>', '<', '\\1', ''];
+    $replace = ['\\1', '>', '<', '>'];
 
     return preg_replace($search, $replace, $buffer);
   }

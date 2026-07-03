@@ -4,172 +4,101 @@ namespace Cadud\Helpers\Core;
 
 class Router
 {
-  /** @var array $routes Para rotas fixas */
-  private static array $routes = [];
+  private array $staticRoutes = [];
+  private array $dynamicRoutes = [];
+  private array $middlewareRegistry = [];
 
-  /** @var array $magicRoutes Para rodas dinâmicas */
-  private static array $magicRoutes = [];
-
-  private static array $middlewares = [];
-
-  /** @deprecated */
-  public static function configController(?string $controller = null) {}
-
-  /** @deprecated */
-  public static function configUseSlash(bool $useSlash = true) {}
-
-  /** @deprecated */
-  private static $dev_only = null;
-
-  /** @deprecated */
-  public static function configDevOnlyMiddleware(string $dev_only_host)
+  public function get(string $path, callable $action, array|string $middlewares = []): self
   {
-    self::$dev_only = $dev_only_host;
+    return $this->add('GET', $path, $action, (array)$middlewares);
   }
 
-  public static function get(string $url, $target, string $method = '', string $middleware = 'guest')
+  public function post(string $path, callable $action, array|string $middlewares = []): self
   {
-    self::add("GET", $url, $target, $method, $middleware);
+    return $this->add('POST', $path, $action, (array)$middlewares);
   }
 
-  public static function post(string $url, $target, string $method = '', string $middleware = 'guest')
+  public function registerMiddleware(string $key, callable $middleware): self
   {
-    self::add("POST", $url, $target, $method, $middleware);
+    $this->middlewareRegistry[$key] = $middleware;
+    return $this;
   }
 
-  public static function addMiddleware(string $key, callable $func)
+  private function add(string $method, string $path, callable $action, array $middlewares): self
   {
-    self::$middlewares[$key] = $func;
-  }
+    $path = '/' . trim($path, '/');
+    $route = new Route($method, $path, $action, $middlewares);
 
-  private static function add(string $url_method, string $url, $target, string $method = '', string $middleware = 'guest')
-  {
-    $url = self::prepareUrl($url);
-    $method = self::prepareMethod($method);
+    if (str_contains($path, '{')) {
+      // Converte {id} em uma regex capturável
+      $regex = preg_replace('/\{[a-zA-Z0-9_]+\}/', '([^/]+)', $path);
+      $regex = '#^' . $regex . '$#';
 
-    $data = [
-      'target'      => $target,
-      'action'      => $method,
-      'middleware'  => $middleware
-    ];
-
-    if (self::isMagic($url)) {
-
-      self::$magicRoutes[$url_method][] = [
-        'url' => $url,
-        ...$data
+      // Indexação tipo "SQL": Agrupa por Método -> Quantidade de segmentos
+      $segmentCount = substr_count($path, '/');
+      $this->dynamicRoutes[$method][$segmentCount][] = [
+        'regex' => $regex,
+        'route' => $route
       ];
     } else {
-      self::$routes[$url_method][$url] = $data;
-    }
-  }
-
-  private static function prepareUrl(string $url): string
-  {
-    return trim($url, '/');
-  }
-
-  private static function prepareMethod(string $method): string
-  {
-    return strtoupper($method);
-  }
-
-  public static function isMagic(string $url)
-  {
-    return str_contains($url, '{');
-  }
-
-  public static function run(string $url)
-  {
-    $url = self::prepareUrl($url);
-    $httpMethod = self::prepareMethod($_SERVER['REQUEST_METHOD']);
-
-    if (isset(self::$routes[$httpMethod][$url])) {
-      $route = self::$routes[$httpMethod][$url];
-
-      return self::execute($route);
+      // Indexação direta O(1) para rotas estáticas
+      $this->staticRoutes[$method][$path] = $route;
     }
 
-    if (isset(self::$magicRoutes[$httpMethod])) {
-      // Partes da URL que está sendo rodada
-      $urlParts = explode('/', $url);
+    return $this;
+  }
 
-      // Contagem de slices
-      $urlCount = count($urlParts);
+  public function run(string $uri, string $method)
+  {
+    $uri = '/' . trim($uri, '/');
+    $method = strtoupper($method);
 
-      foreach (self::$magicRoutes[$httpMethod] as $route) {
-        // Partes da rota que está sendo verificada
-        $pathParts = explode('/', $route['url']);
+    // 1. Busca Direta (O(1) - Rápido como um índice de chave primária)
+    if (isset($this->staticRoutes[$method][$uri])) {
+      return $this->execute($this->staticRoutes[$method][$uri]);
+    }
 
-        // Se o número de fatias for diferente, essa rota não serve
-        if (count($pathParts) !== $urlCount) {
-          continue;
-        }
-
-        $params = [];
-        $match = true;
-
-        // Compara fatia por fatia
-        foreach ($pathParts as $index => $part) {
-          if (self::isMagic($part)) {
-            // É um parametro mágico {}, guarde o parametro no array
-            $params[] = $urlParts[$index];
-          } else if ($part !== $urlParts[$index]) {
-
-            // É um texto fixo (ex: "blog") e não bate com a URL? não serve também
-            $match = false;
-            break;
-          }
-        }
-
-        // Se chegamos aqui e $match continua true, a rota foi encontrada
-        if ($match) {
-          return self::execute($route, $params);
+    // 2. Busca Dinâmica Filtrada por Segmentos
+    $segmentCount = substr_count($uri, '/');
+    if (isset($this->dynamicRoutes[$method][$segmentCount])) {
+      foreach ($this->dynamicRoutes[$method][$segmentCount] as $dynamic) {
+        if (preg_match($dynamic['regex'], $uri, $matches)) {
+          array_shift($matches); // Remove a string completa do match
+          return $this->execute($dynamic['route'], $matches);
         }
       }
     }
 
-    return ["error" => 404];
+    return $this->handleError(404);
   }
 
-  /**
-   * O Motor único de execução
-   */
-  private static function execute(array $route, array $params = [])
+  private function execute(Route $route, array $params = [])
   {
-    if (!self::checkAccess($route['middleware'])) {
-      return ["error" => 403];
+    // Resolução dos middlewares em Pipeline (Cebola / Onion)
+    $pipeline = function () use ($route, $params) {
+      return ($route->action)(...$params);
+    };
+
+    // Executa os middlewares de trás para frente, envolvendo a action
+    foreach (array_reverse($route->middlewares) as $middlewareKey) {
+      if (!isset($this->middlewareRegistry[$middlewareKey])) {
+        return $this->handleError(500, "Middleware {$middlewareKey} não registrado.");
+      }
+
+      $middleware = $this->middlewareRegistry[$middlewareKey];
+
+      // Cada middleware recebe o próximo passo ($next) e os parâmetros
+      $pipeline = function () use ($middleware, $pipeline, $params) {
+        return $middleware($pipeline, ...$params);
+      };
     }
 
-    $target = $route['target'];
-    $action = $route['action'];
-
-    if (is_callable($target)) {
-      return call_user_func_array($target, $params);
-    }
-
-    if (class_exists($target) && method_exists($target, $action)) {
-      return $target::$action();
-    }
-
-    return ["error" => 404];
+    return $pipeline();
   }
 
-  public static function checkAccess(string $key): bool
+  private function handleError(int $code, string $message = '')
   {
-    if ($key === "guest") return true;
-
-    return $middle[$key] ?? false;
-  }
-
-  /**
-   * Returns all the routes in array format
-   */
-  public static function debug()
-  {
-    return [
-      "comum routes" => self::$routes,
-      "magic routes" => self::$magicRoutes
-    ];
+    http_response_code($code);
+    return ['error' => $code, 'message' => $message];
   }
 }

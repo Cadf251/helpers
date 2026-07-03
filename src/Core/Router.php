@@ -48,8 +48,12 @@ class Router
     return $this;
   }
 
-  public function run(string $uri, string $method)
+  public function run(?string $uri = null, ?string $method = null)
   {
+    $uri = $uri ?? parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    
+    $method = $method ?? $_SERVER['REQUEST_METHOD'];
+
     $uri = '/' . trim($uri, '/');
     $method = strtoupper($method);
 

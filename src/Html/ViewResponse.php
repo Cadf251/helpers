@@ -36,8 +36,8 @@ class ViewResponse
     // 2. Processamento de espaços em ordem cronológica perfeita
     $search = [
       '/(\s)+/s',       // Espaços multiplos, tabs, \n, vira u espaço único
-      '/\>[^\S ]+/s',   // ">  " vira ">"
-      '/[^\S ]+\</s',   // "  <" vira "<"
+      '/\>\s+/s',   // ">  " vira ">"
+      '/\s+\</s',   // "  <" vira "<"
       '/ \>/s'          // "<div >" vira "<div>"
     ];
 

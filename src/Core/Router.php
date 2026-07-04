@@ -4,27 +4,26 @@ namespace Cadud\Helpers\Core;
 
 class Router
 {
-  private array $staticRoutes = [];
-  private array $dynamicRoutes = [];
-  private array $middlewareRegistry = [];
+  private static array $staticRoutes = [];
+  private static array $dynamicRoutes = [];
+  private static array $middlewareRegistry = [];
 
-  public function get(string $path, callable $action, array|string $middlewares = []): self
+  public static function get(string $path, callable $action, array|string $middlewares = [])
   {
-    return $this->add('GET', $path, $action, (array)$middlewares);
+    self::add('GET', $path, $action, (array)$middlewares);
   }
 
-  public function post(string $path, callable $action, array|string $middlewares = []): self
+  public static function post(string $path, callable $action, array|string $middlewares = [])
   {
-    return $this->add('POST', $path, $action, (array)$middlewares);
+    self::add('POST', $path, $action, (array)$middlewares);
   }
 
-  public function registerMiddleware(string $key, callable $middleware): self
+  public static function registerMiddleware(string $key, callable $middleware)
   {
-    $this->middlewareRegistry[$key] = $middleware;
-    return $this;
+    self::$middlewareRegistry[$key] = $middleware;
   }
 
-  private function add(string $method, string $path, callable $action, array $middlewares): self
+  private static function add(string $method, string $path, callable $action, array $middlewares)
   {
     $path = '/' . trim($path, '/');
     $route = new Route($method, $path, $action, $middlewares);
@@ -36,19 +35,17 @@ class Router
 
       // Indexação tipo "SQL": Agrupa por Método -> Quantidade de segmentos
       $segmentCount = substr_count($path, '/');
-      $this->dynamicRoutes[$method][$segmentCount][] = [
+      self::$dynamicRoutes[$method][$segmentCount][] = [
         'regex' => $regex,
         'route' => $route
       ];
     } else {
       // Indexação direta O(1) para rotas estáticas
-      $this->staticRoutes[$method][$path] = $route;
+      self::$staticRoutes[$method][$path] = $route;
     }
-
-    return $this;
   }
 
-  public function run(?string $uri = null, ?string $method = null)
+  public static function run(?string $uri = null, ?string $method = null)
   {
     $uri = $uri ?? parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     
@@ -58,25 +55,25 @@ class Router
     $method = strtoupper($method);
 
     // 1. Busca Direta (O(1) - Rápido como um índice de chave primária)
-    if (isset($this->staticRoutes[$method][$uri])) {
-      return $this->execute($this->staticRoutes[$method][$uri]);
+    if (isset(self::$staticRoutes[$method][$uri])) {
+      return self::execute(self::$staticRoutes[$method][$uri]);
     }
 
     // 2. Busca Dinâmica Filtrada por Segmentos
     $segmentCount = substr_count($uri, '/');
-    if (isset($this->dynamicRoutes[$method][$segmentCount])) {
-      foreach ($this->dynamicRoutes[$method][$segmentCount] as $dynamic) {
+    if (isset(self::$dynamicRoutes[$method][$segmentCount])) {
+      foreach (self::$dynamicRoutes[$method][$segmentCount] as $dynamic) {
         if (preg_match($dynamic['regex'], $uri, $matches)) {
           array_shift($matches); // Remove a string completa do match
-          return $this->execute($dynamic['route'], $matches);
+          return self::execute($dynamic['route'], $matches);
         }
       }
     }
 
-    return $this->handleError(404);
+    return self::handleError(404);
   }
 
-  private function execute(Route $route, array $params = [])
+  private static function execute(Route $route, array $params = [])
   {
     // Resolução dos middlewares em Pipeline (Cebola / Onion)
     $pipeline = function () use ($route, $params) {
@@ -85,11 +82,11 @@ class Router
 
     // Executa os middlewares de trás para frente, envolvendo a action
     foreach (array_reverse($route->middlewares) as $middlewareKey) {
-      if (!isset($this->middlewareRegistry[$middlewareKey])) {
-        return $this->handleError(500, "Middleware {$middlewareKey} não registrado.");
+      if (!isset(self::$middlewareRegistry[$middlewareKey])) {
+        return self::handleError(500, "Middleware {$middlewareKey} não registrado.");
       }
 
-      $middleware = $this->middlewareRegistry[$middlewareKey];
+      $middleware = self::$middlewareRegistry[$middlewareKey];
 
       // Cada middleware recebe o próximo passo ($next) e os parâmetros
       $pipeline = function () use ($middleware, $pipeline, $params) {
@@ -100,7 +97,7 @@ class Router
     return $pipeline();
   }
 
-  private function handleError(int $code, string $message = '')
+  private static function handleError(int $code, string $message = '')
   {
     http_response_code($code);
     return ['error' => $code, 'message' => $message];

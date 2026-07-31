@@ -10,7 +10,7 @@ class CdpradoApiService
   public function __construct(
     private string $token,
   ) {}
-
+  
   public function authorize(): void
   {
     // 1. Obter cabeçalhos HTTP de forma segura
@@ -18,37 +18,14 @@ class CdpradoApiService
 
     // 2. Validar o Token de Autorização (Bearer Token)
     $authorization = $headers['authorization'] ?? '';
-    $expectedToken = "Bearer {$this->token}";
 
-    if (!hash_equals($expectedToken, $authorization)) {
+    // Extrai apenas a string do token removendo o 'Bearer '
+    $receivedToken = preg_replace('/^Bearer\s+/i', '', $authorization);
+
+    $expectedHash = hash('sha256', $this->token);
+    
+    if (!hash_equals($expectedHash, $receivedToken)) {
       $this->denyAccess('Acesso negado: Token inválido ou ausente.', 403);
-    }
-
-    // 3. Validar a Origem da Requisição (Domínios Permitidos)
-    $allowedDomains = ['cdprado.dev', 'cdprado.local'];
-
-    // Pega o Origin ou Referer enviado pelo navegador/cliente
-    $originHeader = $headers['origin'] ?? $headers['referer'] ?? '';
-    $hostHeader   = $_SERVER['HTTP_HOST'] ?? '';
-
-    $originHost = '';
-    if (!empty($originHeader)) {
-      $originHost = parse_url($originHeader, PHP_URL_HOST) ?? '';
-    } else {
-      $originHost = strtok($hostHeader, ':'); // Remove porta, se existir (ex: cdprado.local:8080)
-    }
-
-    // Verifica se o host pertence a um dos domínios permitidos
-    $isAllowed = false;
-    foreach ($allowedDomains as $domain) {
-      if ($originHost === $domain || str_ends_with($originHost, '.' . $domain)) {
-        $isAllowed = true;
-        break;
-      }
-    }
-
-    if (!$isAllowed) {
-      $this->denyAccess('Acesso negado: Origem não permitida.', 403);
     }
   }
 

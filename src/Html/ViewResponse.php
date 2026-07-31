@@ -33,15 +33,18 @@ class ViewResponse
   {
     $buffer = preg_replace('/<!--[\s\S]*?-->/', '', $buffer);
 
-    // 2. Processamento de espaços em ordem cronológica perfeita
+    // Processamento seguro de minificação HTML
     $search = [
-      '/(\s)+/s',       // Espaços multiplos, tabs, \n, vira u espaço único
-      '/\>\s+/s',   // ">  " vira ">"
-      '/\s+\</s',   // "  <" vira "<"
-      '/ \>/s'          // "<div >" vira "<div>"
+      '/\s+/s',          // 1. Reduz múltiplos espaços/quebras de linha para um único espaço
+      '/>\s+</s',        // 2. Remove espaços SOMENTE se estiverem ENTRE duas tags (> <)
+      '/^\s+|\s+$/m'     // 3. Limpa espaços no início e fim das linhas
     ];
 
-    $replace = ['\\1', '>', '<', '>'];
+    $replace = [
+      ' ',
+      '><',
+      ''
+    ];
 
     return preg_replace($search, $replace, $buffer);
   }

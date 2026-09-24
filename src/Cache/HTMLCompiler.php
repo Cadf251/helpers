@@ -63,7 +63,24 @@ class HTMLCompiler
         unlink($targetFile);
       }
     } else {
-      // Lógica opcional para varrer a public/ e limpar todos os index.html criados (limpeza total)
+      $this->deletePath($this->basePath);
     }
+  }
+
+  private function deletePath(string $path)
+  {
+    $itens = array_diff(scandir($path), ['.', '..']);
+
+    foreach ($itens as $item) {
+        $caminho = $path . DIRECTORY_SEPARATOR . $item;
+
+        if (is_dir($caminho)) {
+            $this->deletePath($caminho); // Chama a si mesmo para subpastas
+        } else {
+            unlink($caminho); // Deleta arquivos
+        }
+    }
+
+    rmdir($path);
   }
 }

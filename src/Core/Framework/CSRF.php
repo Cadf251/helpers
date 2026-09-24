@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infra;
+namespace Cadud\Helpers\Core\Framework;
 
 class CSRF
 {

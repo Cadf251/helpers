@@ -73,9 +73,7 @@ abstract class Controller
     }
 
     // Caminho físico do layout
-    $layoutPath = sprintf("%s/views/layouts/%s.php", $config->rootDir, $this->layout ?? 'main');
-
-    $viewResponse = LoadLayout::loadView($layoutPath, $this->view->get());
+    $viewResponse = LoadLayout::loadView($this->layout, $this->view->get());
 
     if ($viewResponse->withError) {
       $this->error(500);

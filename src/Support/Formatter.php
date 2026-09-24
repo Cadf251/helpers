@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Helpers\Formatters;
+namespace Cadud\Helpers\Support;
 
 class Formatter
 {

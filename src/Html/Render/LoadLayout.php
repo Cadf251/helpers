@@ -1,6 +1,8 @@
 <?php
 
-namespace Cadud\Helpers\Html;
+namespace Cadud\Helpers\Html\Render;
+
+use Cadud\Helpers\Html\DTO\ViewResponse;
 
 class LoadLayout
 {
@@ -10,7 +12,7 @@ class LoadLayout
    * @param string $path O caminho físico absoluto
    * @param array $view As informações que devem ser passadas para a view
    * 
-   * @return ViewResponse 
+   * @return ViewResponse
    */
   public static function loadView(string $path, array $view = []): ViewResponse
   {

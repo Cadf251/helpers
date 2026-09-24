@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Helpers\Core;
+namespace Cadud\Helpers\Core\Database;
 
 use DateTime;
 use Exception;
@@ -91,9 +91,6 @@ class DbConn
 
   public const FETCH_ONE = 1;
   public const FETCH_ALL = 2;
-
-  /** @deprecated */
-  public const FECTH_ALL = 2;
 
   public function execute(
     string $query,

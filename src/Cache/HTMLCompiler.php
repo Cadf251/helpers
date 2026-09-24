@@ -1,10 +1,10 @@
 <?php
 
-namespace Cadud\Helpers\Html;
+namespace Cadud\Helpers\Cache;
 
-// use Cadud\Helpers\Html\ViewResponse;
+use Cadud\Helpers\Html\DTO\ViewResponse;
 
-class Compiler
+class HTMLCompiler
 {
   private string $basePath;
 

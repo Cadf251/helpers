@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Helpers\Html;
+namespace Cadud\Helpers\Html\DTO;
 
 class ViewResponse
 {

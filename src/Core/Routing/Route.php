@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Helpers\Core;
+namespace Cadud\Helpers\Core\Rounting;
 
 class Route
 {

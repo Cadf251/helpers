@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Helpers\Email;
+namespace Cadud\Helpers\Support;
 
 use Exception;
 use PHPMailer\PHPMailer\PHPMailer as PHPMailer;

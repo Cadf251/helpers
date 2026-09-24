@@ -2,6 +2,8 @@
 
 namespace Framework\Build;
 
+use Exception;
+
 class HTMLBuilder
 {
   private array $dicionario = [];
@@ -21,9 +23,15 @@ class HTMLBuilder
   {
     $jsonRaw = file_get_contents($this->input);
 
-    if($jsonRaw === false) return;
+    if($jsonRaw === false) {
+      throw new Exception("Arquivo {$this->input} não é válido");
+    };
 
     $app = json_decode($jsonRaw, true);
+
+    if ($app === false) {
+      throw new Exception(("Arquivo {$this->input} não pode ser decodificado"));
+    }
     $this->html .= $this->buildHTML($app);
     
     $this->putHTML();

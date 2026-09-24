@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Build;
+namespace Cadud\Helpers\Build;
 
 use Exception;
 
@@ -19,7 +19,7 @@ class HTMLBuilder
     $this->dest = $dest;
   }
 
-  public function build()
+  public function build(): bool
   {
     $jsonRaw = file_get_contents($this->input);
 
@@ -32,10 +32,25 @@ class HTMLBuilder
     if ($app === false) {
       throw new Exception(("Arquivo {$this->input} não pode ser decodificado"));
     }
+
     $this->html .= $this->buildHTML($app);
     
-    $this->putHTML();
-    $this->putTexts();
+    // Put HTML
+    $html = file_put_contents($this->dest . "HTML.php", $this->html);
+
+    if (!$html) {
+      throw new Exception(("HTML.php não foi salvo"));
+    }
+
+    // Put Texts
+    $json = json_encode($this->dicionario, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
+    $texts = file_put_contents($this->dest . "texts.json", $json);
+    
+    if (!$texts) {
+      throw new Exception(("Texts.json não foi salvo"));
+    }
+    
+    return true;
   }
 
   private function buildHTML(array $node, int $depth = 0): string
@@ -128,16 +143,5 @@ class HTMLBuilder
 
     // 4. Montamos a tag diretamente no escopo (por enquanto tudo é div)
     return "$indent<div{$classAttr}>\n" . $innerHTML . $indent . "</div>\n";
-  }
-
-  private function putHTML()
-  {
-    file_put_contents($this->dest . "HTML.php", $this->html);
-  }
-
-  private function putTexts()
-  {
-    $json = json_encode($this->dicionario, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
-    file_put_contents($this->dest . "texts.json", $json);
   }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Framework\Build;
+namespace Cadud\Helpers\Build;
 
 class TokenBuilder
 {
@@ -18,15 +18,18 @@ class TokenBuilder
     $this->dest = $dest;
   }
 
-  public function build()
+  public function build(): bool
   {
     $jsonString = file_get_contents($this->input);
-    if (!$jsonString) return;
+    if (!$jsonString) return false;
     
     $data = json_decode($jsonString, true);
 
+    if (!$data) return false;
+
     $this->buildToken($data);
-    $this->put();
+
+    return file_put_contents($this->dest, $this->cssOutput);
   }
 
   private function buildToken(array $data)
@@ -122,10 +125,5 @@ class TokenBuilder
         $this->extractTokens($token, $currentKey);
       }
     }
-  }
-
-  private function put()
-  {
-    file_put_contents($this->dest, $this->cssOutput);
   }
 }

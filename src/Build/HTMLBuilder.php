@@ -129,8 +129,9 @@ class HTMLBuilder
    */
   private function toClassName(string $name): string
   {
-    $class = preg_replace('/[^A-Za-z0-9_-]+/', '-', trim($name));
-    return trim($class, '-');
+    $classes = preg_split('/\s+/', trim($name));
+    $classes = array_map(fn($c) => trim(preg_replace('/[^A-Za-z0-9_-]+/', '-', $c), '-'), $classes);
+    return implode(' ', array_filter($classes));
   }
 
   private function buildHTML(array $node, int $depth = 0, bool $isRoot = true): string

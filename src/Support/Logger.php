@@ -2,6 +2,7 @@
 
 namespace Cadud\Helpers\Support;
 
+use Cadud\Helpers\Core\Framework\ErrorController;
 use Exception;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
@@ -38,7 +39,7 @@ class Logger
       }
 
       // Apenas instancia o ErrorController e ele resolve o resto!
-      new \Cadud\Controllers\ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.', $e);
+      new ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.', $e);
     });
 
     // 2. Captura Erros Fatais (Shutdown)
@@ -60,7 +61,7 @@ class Logger
         }
 
         // Apenas instancia o ErrorController e ele resolve o resto!
-        new \Cadud\Controllers\ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.');
+        new ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.');
       }
     });
   }

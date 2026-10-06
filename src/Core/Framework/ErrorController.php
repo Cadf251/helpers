@@ -1,6 +1,6 @@
 <?php
 
-namespace Cadud\Controllers;
+namespace Cadud\Helpers\Core\Framework;
 
 use Cadud\Helpers\Core\Framework\Controller;
 use Cadud\Helpers\Html\DTO\View;

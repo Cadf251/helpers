@@ -2,7 +2,6 @@
 
 namespace Cadud\Helpers\Core\Framework;
 
-use Cadud\Controllers\ErrorController;
 use Cadud\Helpers\Cache\HTMLCompiler;
 use Cadud\Helpers\Core\Config\AppConfig;
 use Cadud\Helpers\Html\DTO\View;
@@ -79,7 +78,7 @@ abstract class Controller
     $viewResponse = LoadLayout::loadView($this->layout, $this->view->get());
 
     if ($viewResponse->withError) {
-      // ErrorController::render()
+      new ErrorController(500);
     }
 
     // Se for export/editor, retorna o HTML puro para quem chamou

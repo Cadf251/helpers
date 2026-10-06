@@ -2,7 +2,7 @@
 
 namespace Cadud\Helpers\Core\Routing;
 
-use Cadud\Controllers\ErrorController;
+use Cadud\Helpers\Core\Framework\ErrorController;
 use Cadud\Helpers\Support\Logger;
 
 class Router

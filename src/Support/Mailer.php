@@ -11,6 +11,9 @@ class Mailer
   public PHPMailer $mail;
   private static array $credentials = [];
 
+  /**
+   * @throws Exception
+   */
   public function __construct(
     string $subject,
     string $body,
@@ -20,7 +23,9 @@ class Mailer
   )
   {
     try {
-      if (empty(self::$credentials)) self::config();
+      if (empty(self::$credentials)) {
+        throw new Exception("[Mailer]: SMTP not configured");
+      }
 
       $this->mail = new PHPMailer(true);
       $this->mail->SMTPDebug  = SMTP::DEBUG_OFF;
@@ -48,21 +53,21 @@ class Mailer
   }
 
   public static function config(
-    ?string $host = null,
-    ?string $user = null,
-    ?string $pass = null,
-    ?int $port = null,
-    ?string $from = null,
-    ?string $fromName = null
+    string $host,
+    string $user,
+    string $pass,
+    int $port,
+    string $from,
+    string $fromName
   )
   {
     self::$credentials = [
-      "host" => $host ?? $_ENV["SMTP_HOST"],
-      "user" => $user ?? $_ENV["SMTP_USER"],
-      "pass" => $pass ?? $_ENV["SMTP_PASS"],
-      "port" => $port ?? (int)$_ENV["SMTP_PORT"],
-      "from" => $from ?? $_ENV["SMTP_FROM_EMAIL"],
-      "from_name" => $fromName ?? $_ENV["SMTP_FROM_NAME"]
+      "host" => $host,
+      "user" => $user,
+      "pass" => $pass,
+      "port" => $port,
+      "from" => $from,
+      "from_name" => $fromName
     ];
   }
 

@@ -2,32 +2,39 @@
 
 namespace Cadud\Helpers\Support;
 
+use Exception;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger as MonoLogger;
 use Throwable;
 
-/**
- * Gerenciador de Logs da Aplicação
- */
 class Logger
 {
   private static ?string $path = null;
   private static ?MonoLogger $logger = null;
 
-  public static function config(?string $path = null): string
+  public static function config(string $path): string
   {
-    self::$path = $path ?? $_ENV['LOG_PATH'] ?? __DIR__ . '../../../storage/logs';
+    self::$path = $path;
     return self::$path;
   }
 
   public static function observe(): void
   {
-    // 1. Captura Exceções não tratadas
+    if (ob_get_level() === 0) {
+      ob_start();
+    }
+
+    // 1. Captura Throwables não tratados
     set_exception_handler(function (Throwable $e) {
       self::error($e);
 
-      http_response_code(500);
+      if (!headers_sent()) {
+        ob_clean();
+        http_response_code(500);
+      }
+
+      echo json_encode(['error' => 'Internal Server Error']);
       exit();
     });
 
@@ -40,20 +47,37 @@ class Logger
           'line' => $error['line'],
           'type' => $error['type']
         ]);
+
+        if (!headers_sent()) {
+          ob_clean();
+          http_response_code(500);
+        }
+
+        echo json_encode(['error' => 'Fatal Error']);
       }
     });
   }
 
-  private static function getLogger(): MonoLogger
+  private static function getLogger(): ?MonoLogger
   {
-    $logPath = self::$path ?? self::config();
-    $fileName = date("dmY") . ".log";
-    $fullPath = rtrim($logPath, '/') . '/' . $fileName;
+    if (self::$path === null) {
+      // Em vez de dar throw, registra no log padrão do PHP (Apache/Nginx/syslog)
+      error_log("[Logger Error]: Logger path is not configured.");
+      return null;
+    }
 
-    // Instancia o Monolog apenas uma vez por requisição
     if (self::$logger === null) {
-      self::$logger = new MonoLogger("app");
-      self::$logger->pushHandler(new StreamHandler($fullPath, Level::Debug));
+      try {
+        $fileName = date("dmY") . ".log";
+        $fullPath = rtrim(self::$path, '/') . '/' . $fileName;
+
+        self::$logger = new MonoLogger("app");
+        self::$logger->pushHandler(new StreamHandler($fullPath, Level::Debug));
+      } catch (Throwable $e) {
+        // Se falhar a escrita do arquivo/permissão, grava no log de erro do sistema
+        error_log("[Logger Failure]: " . $e->getMessage());
+        return null;
+      }
     }
 
     return self::$logger;
@@ -63,19 +87,32 @@ class Logger
   {
     if ($message instanceof Throwable) {
       $context = array_merge($context, [
-        "file" => $message->getFile(),
-        "line" => $message->getLine(),
-        "trace" => explode("\n", $message->getTraceAsString()) // Trace formatado como array
+        "file"  => $message->getFile(),
+        "line"  => $message->getLine(),
+        "trace" => explode("\n", $message->getTraceAsString())
       ]);
       $message = $message->getMessage();
     }
 
-    $logger = self::getLogger();
+    try {
+      $logger = self::getLogger();
 
-    if (method_exists($logger, $level)) {
-      $logger->$level($message, $context);
-    } else {
-      $logger->error($message, $context);
+      // Se o Monolog estiver disponível, grava nele
+      if ($logger !== null) {
+        if (method_exists($logger, $level)) {
+          $logger->$level($message, $context);
+        } else {
+          $logger->error($message, $context);
+        }
+        return;
+      }
+
+      // FALLBACK: Se o Monolog falhar ou não estiver configurado, usa o error_log nativo do PHP
+      $formattedContext = !empty($context) ? ' ' . json_encode($context) : '';
+      error_log(strtoupper($level) . ": " . $message . $formattedContext);
+    } catch (Throwable $e) {
+      // Última barreira: Se tudo der errado, garante que não interrompa o script
+      error_log("CRITICAL: Logger failed entirely: " . $e->getMessage());
     }
   }
 

@@ -7,61 +7,82 @@ use Exception;
 use PDO;
 use PDOException;
 use PDOStatement;
+use Throwable;
 
+/**
+ * Keeps static PDO conection and handles Database operations
+ */
 class DbConn
 {
   private static ?self $instance = null;
   private static ?PDO $conn = null;
   private static array $credentials = [];
 
-  private function __construct()
-  {
-    if (empty(self::$credentials)) self::config();
-  }
+  private function __construct() {}
 
-  public static function getInstance()
+  /**
+   * Returns its instance. Needs to be configured
+   * 
+   * @throws Exception If not configured
+   * 
+   * @return self
+   */
+  public static function getInstance(): self
   {
-    if (self::$instance === null) self::$instance = new self();
+    if (self::$instance === null) {
+      throw new Exception("[DBConn]: Database not configured");
+    }
 
     return self::$instance;
   }
 
+  /**
+   * Configures host and database conection
+   * 
+   * @return void
+   */
   public static function config(
-    $host = null,
-    $db_name = null,
-    $db_user = null,
-    $db_pass = null
-  ) {
+    string $host,
+    string $db_name,
+    string $db_user,
+    string $db_pass
+  ): void {
     self::$credentials = [
-      "host" => $host ?? $_ENV["DB_HOST"],
-      "db_name" => $db_name ?? $_ENV["DB_NAME"],
-      "db_user" => $db_user ?? $_ENV["DB_USER"],
-      "db_pass" => $db_pass ?? $_ENV["DB_PASS"]
+      "host" => $host,
+      "db_name" => $db_name,
+      "db_user" => $db_user,
+      "db_pass" => $db_pass
     ];
   }
 
   /**
-   * Use getConn() instead
+   * Gets PDO connection
    * 
-   * @deprecated
+   * @throws Exception
+   * 
+   * @return PDO
    */
-  public static function get(): PDO
-  {
-    return self::getConn();
-  }
-
   public static function getConn(): PDO
   {
     if (self::$conn === null) {
-      self::connect();
+      try {
+        self::connect();
+      } catch (Exception $e) {
+        throw new Exception($e->getMessage(), $e->getCode(), $e);
+      }
     }
 
     return self::$conn;
   }
 
+  /**
+   * @throws Exception Treated exception
+   */
   private static function connect(): void
   {
-    if (empty((self::$credentials))) self::config();
+    if (empty((self::$credentials))) {
+      throw new Exception("[DBConn]: Database not configured");
+    }
 
     try {
       self::$conn = new PDO(
@@ -70,7 +91,7 @@ class DbConn
         self::$credentials["db_pass"]
       );
     } catch (PDOException $e) {
-      throw new Exception("Banco não conectado: " . $e->getMessage(), 0, $e);
+      throw new Exception("[DBConn]: Database not connected: " . $e->getMessage(), 0, $e);
     }
   }
 
@@ -88,6 +109,8 @@ class DbConn
     // Returns it
     return $full;
   }
+
+  // DB HELPERS. MAYBE IT SHOULD BE ANOTHER CLASS
 
   public const FETCH_ONE = 1;
   public const FETCH_ALL = 2;
@@ -196,7 +219,7 @@ class DbConn
   {
     foreach ($params as $key => $value) {
       if ($value instanceof DateTime) {
-        $value = $value->format($_ENV["DATE_FORMAT"] ?? "Y-m-d H:i:s");
+        $value = $value->format("Y-m-d H:i:s");
       }
 
       try {

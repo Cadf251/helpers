@@ -7,6 +7,7 @@ use Cadud\Helpers\Core\Config\AppConfig;
 use Cadud\Helpers\Html\DTO\View;
 use Cadud\Helpers\Html\DTO\ViewResponse;
 use Cadud\Helpers\Html\Render\LoadLayout;
+use Exception;
 
 abstract class Controller
 {
@@ -60,7 +61,12 @@ abstract class Controller
 
   protected function view(): mixed
   {
-    $config = $this->getConfig();
+    try {
+      $config = $this->getConfig();
+    } catch (Exception $e) {
+      throw new Exception($e);
+    }
+    
     // Meta tag Canonical
     if (empty($this->view->head->canonical)) {
       $canonicalUrl = rtrim($config->baseUrl, '/') . '/' . ltrim($this->route, '/');
@@ -95,7 +101,11 @@ abstract class Controller
 
   protected function cacheView(ViewResponse $view): void
   {
-    $config = $this->getConfig();
+    try {
+      $config = $this->getConfig();
+    } catch (Exception $e) {
+      throw new Exception($e->getMessage(), $e->getCode(), $e);
+    }
 
     if ($config->cacheEnabled) {
       $compiler = new HTMLCompiler($config->rootDir . $config->cachePath);
@@ -106,11 +116,15 @@ abstract class Controller
   protected function getConfig(): AppConfig
   {
     if (!self::$globalConfig) {
-      self::$globalConfig = new AppConfig(
-        baseUrl: $_ENV['APP_URL'] ?? 'http://localhost',
-        rootDir: $_ENV['APP_ROOT'] ?? dirname(__DIR__, 3),
-        cacheEnabled: filter_var($_ENV['CACHE_HTML'] ?? false, FILTER_VALIDATE_BOOLEAN)
-      );
+      // It shouldn't use ENV directly or to hard code anything.
+
+      // self::$globalConfig = new AppConfig(
+      //   baseUrl: $_ENV['APP_URL'] ?? 'http://localhost',
+      //   rootDir: $_ENV['APP_ROOT'] ?? dirname(__DIR__, 3),
+      //   cacheEnabled: filter_var($_ENV['CACHE_HTML'] ?? false, FILTER_VALIDATE_BOOLEAN)
+      // );
+
+      throw new Exception("[Controller]: App Config Not Configured");
     }
 
     return self::$globalConfig;

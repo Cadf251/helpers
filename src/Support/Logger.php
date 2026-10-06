@@ -29,13 +29,16 @@ class Logger
     set_exception_handler(function (Throwable $e) {
       self::error($e);
 
-      if (!headers_sent()) {
-        ob_clean();
+      $wantsJson = isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json');
+
+      if ($wantsJson) {
         http_response_code(500);
+        echo json_encode(['error' => 'Internal Server Error']);
+        exit();
       }
 
-      echo json_encode(['error' => 'Internal Server Error']);
-      exit();
+      // Apenas instancia o ErrorController e ele resolve o resto!
+      new \Cadud\Controllers\ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.', $e);
     });
 
     // 2. Captura Erros Fatais (Shutdown)
@@ -48,12 +51,16 @@ class Logger
           'type' => $error['type']
         ]);
 
-        if (!headers_sent()) {
-          ob_clean();
+        $wantsJson = isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json');
+
+        if ($wantsJson) {
           http_response_code(500);
+          echo json_encode(['error' => 'Internal Server Error']);
+          exit();
         }
 
-        echo json_encode(['error' => 'Fatal Error']);
+        // Apenas instancia o ErrorController e ele resolve o resto!
+        new \Cadud\Controllers\ErrorController(500, 'Ocorreu um erro inesperado em nosso servidor.');
       }
     });
   }

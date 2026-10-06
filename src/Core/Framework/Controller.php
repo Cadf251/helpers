@@ -2,6 +2,7 @@
 
 namespace Cadud\Helpers\Core\Framework;
 
+use Cadud\Controllers\ErrorController;
 use Cadud\Helpers\Cache\HTMLCompiler;
 use Cadud\Helpers\Core\Config\AppConfig;
 use Cadud\Helpers\Html\DTO\View;
@@ -61,11 +62,7 @@ abstract class Controller
 
   protected function view(): mixed
   {
-    try {
-      $config = $this->getConfig();
-    } catch (Exception $e) {
-      throw new Exception($e);
-    }
+    $config = $this->getConfig();
     
     // Meta tag Canonical
     if (empty($this->view->head->canonical)) {
@@ -82,7 +79,7 @@ abstract class Controller
     $viewResponse = LoadLayout::loadView($this->layout, $this->view->get());
 
     if ($viewResponse->withError) {
-      $this->error(500);
+      // ErrorController::render()
     }
 
     // Se for export/editor, retorna o HTML puro para quem chamou
@@ -116,23 +113,9 @@ abstract class Controller
   protected function getConfig(): AppConfig
   {
     if (!self::$globalConfig) {
-      // It shouldn't use ENV directly or to hard code anything.
-
-      // self::$globalConfig = new AppConfig(
-      //   baseUrl: $_ENV['APP_URL'] ?? 'http://localhost',
-      //   rootDir: $_ENV['APP_ROOT'] ?? dirname(__DIR__, 3),
-      //   cacheEnabled: filter_var($_ENV['CACHE_HTML'] ?? false, FILTER_VALIDATE_BOOLEAN)
-      // );
-
       throw new Exception("[Controller]: App Config Not Configured");
     }
 
     return self::$globalConfig;
-  }
-
-  public function error(int $code = 404): void
-  {
-    http_response_code($code);
-    exit;
   }
 }

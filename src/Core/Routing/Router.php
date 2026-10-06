@@ -2,6 +2,9 @@
 
 namespace Cadud\Helpers\Core\Routing;
 
+use Cadud\Controllers\ErrorController;
+use Cadud\Helpers\Support\Logger;
+
 class Router
 {
   private static array $staticRoutes = [];
@@ -70,7 +73,7 @@ class Router
       }
     }
 
-    return self::handleError(404);
+    new ErrorController(404, "URL Não encontrada");
   }
 
   private static function execute(Route $route, array $params = [])
@@ -83,7 +86,11 @@ class Router
     // Executa os middlewares de trás para frente, envolvendo a action
     foreach (array_reverse($route->middlewares) as $middlewareKey) {
       if (!isset(self::$middlewareRegistry[$middlewareKey])) {
-        return self::handleError(500, "Middleware {$middlewareKey} não registrado.");
+        Logger::warning("Middleware não registrado", [
+          "key" => $middlewareKey
+        ]);
+
+        continue;
       }
 
       $middleware = self::$middlewareRegistry[$middlewareKey];
@@ -95,11 +102,5 @@ class Router
     }
 
     return $pipeline();
-  }
-
-  private static function handleError(int $code, string $message = '')
-  {
-    http_response_code($code);
-    return ['error' => $code, 'message' => $message];
   }
 }

@@ -47,7 +47,7 @@ class DbHelper
     $field = self::sanitizeIdentifier($field);
 
     return self::execute(
-      "SELECT * FROM {$table} WHERE `{$field}` = :{$field}",
+      "SELECT * FROM {$table} WHERE `{$field}` = :{$field} LIMIT 1",
       [$field => $value],
       self::FETCH_ONE
     );
@@ -120,7 +120,7 @@ class DbHelper
   /**
    * Sanitiza nomes de colunas e tabelas para evitar SQL Injection
    */
-  private static function sanitizeIdentifier(string $identifier): string
+  public static function sanitizeIdentifier(string $identifier): string
   {
     return preg_replace('/[^a-zA-Z0-9_]/', '', $identifier);
   }

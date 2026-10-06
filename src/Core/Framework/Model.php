@@ -3,6 +3,7 @@
 namespace Cadud\Helpers\Core\Framework;
 
 use Cadud\Helpers\Core\Database\DbHelper;
+use Cadud\Helpers\Core\Database\SelectQueryBuilder;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -53,9 +54,9 @@ abstract class Model
 
   public static function all(): array
   {
-    return static::selectMany(
-      "SELECT " . static::$fields . " FROM " . static::$table . static::$joins,
-      []
+    return static::select(
+      static::query()
+        ->columns(static::$fields)
     );
   }
 
@@ -63,26 +64,17 @@ abstract class Model
   {
     if ($id === null) return null;
 
-    return static::selectOne(
-      "SELECT * FROM " . static::$table . " WHERE id = :id",
-      ["id" => $id]
-    );
+    return static::select(
+      static::query()
+        ->columns(static::$fields)
+        ->where("id = :id", ["id" => $id])
+        ->limit(1),
+      DbHelper::FETCH_ONE);
   }
 
   public static function findBy(string $field, mixed $value): ?static
   {
     $array = DbHelper::findBy(static::$table, $field, $value);
-    
-    if (empty($array)) {
-      return null;
-    }
-
-    return static::hydrate($array);
-  }
-
-  public static function selectOne(string $query, array $params): ?static
-  {
-    $array = DbHelper::execute($query, $params, DbHelper::FETCH_ONE);
 
     if (empty($array)) {
       return null;
@@ -91,15 +83,28 @@ abstract class Model
     return static::hydrate($array);
   }
 
-  public static function selectMany(string $query, array $params): array
+  public static function select(SelectQueryBuilder $query, int $fetch = DbHelper::FETCH_ALL): static|array|null
   {
-    $array = DbHelper::execute($query, $params, DbHelper::FETCH_ALL);
+    $array = DbHelper::execute($query->toSql(), $query->getParams(), $fetch);
 
     if (empty($array)) {
-      return [];
+      return null;
+    }
+
+    if($fetch === DbHelper::FETCH_ONE) {
+      return static::hydrate($array);
     }
 
     return array_map(fn($row) => static::hydrate($row), $array);
+  }
+
+
+  /**
+   * Retorna uma nova instância do SelectQueryBuilder pré-configurada com a tabela do Model
+   */
+  public static function query(): SelectQueryBuilder
+  {
+    return SelectQueryBuilder::table(static::$table);
   }
 
   protected function create(array $data): int
@@ -128,16 +133,16 @@ abstract class Model
   /**
    * Exporta o objeto para array (útil para rotas/JSON)
    */
-  public function toArray(): array
+  public function toArray(array $except = []): array
   {
     $reflection = new ReflectionClass($this);
     $data = [];
 
-    foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE) as $property) {
+    foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
       $name = $property->getName();
 
       // Ignora propriedades internas da infraestrutura do Model
-      if (in_array($name, ['casts', 'table', 'fields', 'joins'])) {
+      if (in_array($name, $except)) {
         continue;
       }
 
@@ -152,5 +157,6 @@ abstract class Model
   }
 
   abstract public function save();
-  abstract public function delete(int $id): void;
+
+  abstract public function delete(): void;
 }

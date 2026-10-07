@@ -23,11 +23,10 @@ class SelectQueryBuilder
     return new self($table);
   }
 
-  public function columns(string ...$columns): self
+  public function columns(string $columns = "*"): self
   {
-    if (!empty($columns)) {
-      $this->columns = implode(', ', array_map([DbHelper::class, 'sanitizeIdentifier'], $columns));
-    }
+    $this->columns = DbHelper::sanitizeIdentifier($columns);
+    
     return $this;
   }
 

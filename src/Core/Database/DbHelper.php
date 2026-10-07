@@ -118,10 +118,18 @@ class DbHelper
   }
 
   /**
-   * Sanitiza nomes de colunas e tabelas para evitar SQL Injection
+   * Sanitiza nomes de tabelas para evitar SQL Injection
    */
   public static function sanitizeIdentifier(string $identifier): string
   {
     return preg_replace('/[^a-zA-Z0-9_]/', '', $identifier);
+  }
+
+  /**
+   * Sanitiza nomes de colunas para evitar SQL Injection
+   */
+  public static function sanitizeColumnsIdentifier(string $identifier): string
+  {
+    return preg_replace('/[^a-zA-Z0-9_\.\*]/', '', trim($identifier));
   }
 }

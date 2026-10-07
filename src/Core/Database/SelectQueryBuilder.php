@@ -30,10 +30,10 @@ class SelectQueryBuilder
     $clean = [];
     
     foreach ($array as $item) {
-      $clean[] = DbHelper::sanitizeIdentifier($item);
+      $clean[] = DbHelper::sanitizeColumnsIdentifier($item);
     }
 
-    $this->columns = implode(", ", $clean);
+    $this->columns = !empty($clean) ? implode(", ", $clean) : "*";
         
     return $this;
   }

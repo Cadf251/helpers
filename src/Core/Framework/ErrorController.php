@@ -2,13 +2,12 @@
 
 namespace Cadud\Helpers\Core\Framework;
 
-use Cadud\Helpers\Core\Framework\Controller;
-use Cadud\Helpers\Html\DTO\View;
+use Cadud\Helpers\Html\Render\LoadLayout;
 use Throwable;
 
-class ErrorController extends Controller
+class ErrorController
 {
-  public static string $viewName = "errors/default";
+  public static string $path = "./views/errors/default.php";
 
   /**
    * Instancia e executa o disparo do erro imediatamente
@@ -18,9 +17,8 @@ class ErrorController extends Controller
     ?string $message = null,
     ?Throwable $exception = null
   ) {
-    http_response_code($code);
 
-    $this->noIndex();
+    http_response_code($code);
 
     $defaultMessages = [
       400 => 'Requisição Inválida',
@@ -34,18 +32,18 @@ class ErrorController extends Controller
     $title = "Erro {$code}";
     $errorMessage = $message ?? ($defaultMessages[$code] ?? 'Ocorreu um erro inesperado');
 
-    $this->view = new View(self::$viewName);
-    $this->view->head->title($title);
-
-    $this->view->withData([
+    $response = LoadLayout::loadView(self::$path, [
       "title"     => $title,
       "code"      => $code,
       "message"   => $errorMessage,
       "exception" => $exception
     ]);
 
-    $this->view();
-    exit();
+    if (!$response->withError) {
+      $response->render();
+    }
+
+    exit;
   }
 
   /**

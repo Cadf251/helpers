@@ -25,8 +25,16 @@ class SelectQueryBuilder
 
   public function columns(string $columns = "*"): self
   {
-    $this->columns = DbHelper::sanitizeIdentifier($columns);
+    $array = explode(",", $columns);
+
+    $clean = [];
     
+    foreach ($array as $item) {
+      $clean[] = DbHelper::sanitizeIdentifier($item);
+    }
+
+    $this->columns = implode(", ", $clean);
+        
     return $this;
   }
 

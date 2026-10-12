@@ -91,6 +91,16 @@ class DbHelper
     );
   }
 
+  public static function delete(string $table, int $id): void
+  {
+    $table = self::sanitizeIdentifier($table);
+
+    self::execute(
+      "DELETE FROM {$table} WHERE id = :id",
+      ["id" => $id]
+    );
+  }
+
   public static function getLastInsertId(): int
   {
     return (int) DbConn::getConn()->lastInsertId();

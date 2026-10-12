@@ -4,6 +4,7 @@ namespace Cadud\Helpers\Core\Framework;
 
 use Cadud\Helpers\Core\Database\DbHelper;
 use Cadud\Helpers\Core\Database\SelectQueryBuilder;
+use DateTime;
 use ReflectionClass;
 use ReflectionProperty;
 
@@ -13,21 +14,39 @@ abstract class Model
   protected static string $fields = "*";
   protected static string $joins = "";
 
+  protected static bool $timestamps = true;
+
+  protected array $virtual = [];
+  protected array $immutable = [];
+
+  public ?int $id = null;
+  public DateTime $created_at;
+  public ?DateTime $updated_at;
+
   /**
    * Mapeamento de cast automático de colunas do banco
    * Exemplo no Model filho:
    * protected array $casts = [
-   *     'id' => 'int',
+   *     'number' => 'int',
    *     'is_active' => 'bool',
    *     'options' => 'json',
-   *     'created_at' => 'datetime'
    * ];
    */
   protected array $casts = [];
 
+  private function casts(): array
+  {
+    return $this->casts + ['created_at' => 'datetime', 'updated_at' => 'datetime'];
+  }
+
+  /**
+   * Insert data directly to Models' attributes, casting if defined
+   */
   public function fill(array $data): static
   {
     $reflection = new ReflectionClass($this);
+
+    $casts = $this->casts();
 
     foreach ($data as $key => $value) {
       if (!$reflection->hasProperty($key)) {
@@ -37,7 +56,7 @@ abstract class Model
       $property = $reflection->getProperty($key);
 
       // Aplica o Cast se estiver definido
-      $type = $this->casts[$key] ?? null;
+      $type = $casts[$key] ?? null;
       $castedValue = $type ? Caster::cast($value, $type) : $value;
 
       $property->setValue($this, $castedValue);
@@ -46,6 +65,9 @@ abstract class Model
     return $this;
   }
 
+  /**
+   * Creates and fills the Model
+   */
   public static function hydrate(array $row): static
   {
     $instance = new static();
@@ -69,7 +91,8 @@ abstract class Model
         ->columns(static::$fields)
         ->where("id = :id", ["id" => $id])
         ->limit(1),
-      DbHelper::FETCH_ONE);
+      DbHelper::FETCH_ONE
+    );
   }
 
   public static function findBy(string $field, mixed $value): ?static
@@ -91,7 +114,7 @@ abstract class Model
       return null;
     }
 
-    if($fetch === DbHelper::FETCH_ONE) {
+    if ($fetch === DbHelper::FETCH_ONE) {
       return static::hydrate($array);
     }
 
@@ -107,31 +130,24 @@ abstract class Model
     return SelectQueryBuilder::table(static::$table);
   }
 
-  protected function create(array $data): int
-  {
-    return DbHelper::insert(static::$table, $this->prepareForDatabase($data));
-  }
-
-  protected function update(int $id, array $data): void
-  {
-    DbHelper::update(static::$table, $this->prepareForDatabase($data), $id);
-  }
-
   /**
    * Prepara o array de dados aplicando o uncast antes de enviar ao DbHelper
    */
   private function prepareForDatabase(array $data): array
   {
     $prepared = [];
+
+    $casts = $this->casts();
+
     foreach ($data as $key => $value) {
-      $type = $this->casts[$key] ?? null;
+      $type = $casts[$key] ?? null;
       $prepared[$key] = Caster::uncast($value, $type);
     }
     return $prepared;
   }
 
   /**
-   * Exporta o objeto para array (útil para rotas/JSON)
+   * Exporta o objeto para array
    */
   public function toArray(array $except = []): array
   {
@@ -148,15 +164,53 @@ abstract class Model
 
       if ($property->isInitialized($this)) {
         $value = $property->getValue($this);
-        $type = $this->casts[$name] ?? null;
-        $data[$name] = Caster::uncast($value, $type);
+        $data[$name] = $value;
       }
     }
 
     return $data;
   }
 
-  abstract public function save();
+  public function save(): void
+  {
+    if ($this->id === null) {
+      $this->create();
+    } else {
+      $this->update();
+    }
+  }
 
-  abstract public function delete(): void;
+  private function create(): void
+  {
+    if (static::$timestamps) {
+      $this->created_at = new DateTime();
+      $this->updated_at = null;
+    }
+
+    $data = $this->toArray(["id", ...$this->virtual]);
+
+    $this->id = DbHelper::insert(static::$table, $this->prepareForDatabase($data));
+  }
+
+  private function update(): void
+  {
+    if (static::$timestamps) {
+      $this->updated_at = new DateTime();
+    }
+
+    $data = $this->toArray(["id", ...$this->virtual, ...$this->immutable, "created_at"]);
+
+    DbHelper::update(static::$table, $this->prepareForDatabase($data), $this->id);
+  }
+
+  public function delete(): void
+  {
+    if ($this->id === null) {
+      return;
+    }
+
+    DbHelper::delete(static::$table, $this->id);
+
+    $this->id = null;
+  }
 }

@@ -15,6 +15,10 @@ class Caster
       return null;
     }
 
+    if (enum_exists($type) && is_subclass_of($type, \BackedEnum::class)) {
+      return $type::tryFrom($value);
+    }
+
     return match ($type) {
       'int', 'integer' => (int) $value,
       'float', 'double' => (float) $value,
@@ -37,6 +41,10 @@ class Caster
 
     if ($value instanceof DateTime) {
       return $value->format('Y-m-d H:i:s');
+    }
+
+    if ($value instanceof \BackedEnum) {
+      return $value->value;
     }
 
     return match ($type) {
